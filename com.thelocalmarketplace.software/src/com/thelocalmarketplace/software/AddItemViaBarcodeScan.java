@@ -10,6 +10,8 @@ import com.jjjwelectronics.scanner.*;
 import com.thelocalmarketplace.hardware.BarcodedProduct;
 import com.thelocalmarketplace.hardware.external.*;
 
+import ca.ucalgary.seng300.simulation.NullPointerSimulationException;
+
 public class AddItemViaBarcodeScan {
 	HashMap<Barcode, BarcodedProduct> BARCODED_PRODUCT_DATABASE;
 	ElectronicScale scale;
@@ -24,23 +26,31 @@ public class AddItemViaBarcodeScan {
 		this.barcode = barcode.getBarcode();
 		
 		// CHECK FOR SESSION
-//		if(isActiveSession) {
-//			getItemInformation();
-//			
-//		}
+		if(isActiveSession) {
+			getItemInformation();
+			
+		}
 	}
 	
-	public void getItemInformation() {
+	private void getItemInformation() {
 		product = BARCODED_PRODUCT_DATABASE.get(barcode);
 		if (product != null) {
 			price = product.getPrice();
 			expectedWeightInGrams = product.getExpectedWeight();
 		} else {
-			// Throw error?
+			throw new NullPointerSimulationException("product");
 		}
 	}
 	
-	public void updateExpectedWeight(Item item) {
+	public long getItemPrice() {
+		return price;
+	}
+	
+	public double getExpectedWeight() {
+		return expectedWeightInGrams;
+	}
+	
+ 	public void updateExpectedWeight(Item item) {
 		mass = new Mass(expectedWeightInGrams);
 		scale.addAnItem(item);
 	}

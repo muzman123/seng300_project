@@ -28,9 +28,9 @@ public class AddItemViaBarcodeScan {
 //			getItemInformation();
 //			
 //		}
-//	}
+	}
 	
-	private void getItemInformation() {
+	public void getItemInformation() {
 		product = BARCODED_PRODUCT_DATABASE.get(barcode);
 		if (product != null) {
 			price = product.getPrice();
@@ -40,8 +40,7 @@ public class AddItemViaBarcodeScan {
 		}
 	}
 	
-	private void updateExpectedWeight(Item item) {
-		
+	public void updateExpectedWeight(Item item) {
 		mass = new Mass(expectedWeightInGrams);
 		scale.addAnItem(item);
 	}

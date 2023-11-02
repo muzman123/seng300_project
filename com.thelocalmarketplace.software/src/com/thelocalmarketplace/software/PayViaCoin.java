@@ -10,23 +10,34 @@ import ca.ucalgary.seng300.simulation.NullPointerSimulationException;
 public class PayViaCoin {
 	
 	private BigDecimal AMOUNT_DUE;
-	private BigDecimal AMOUNT_PAID;
+	private BigDecimal AMOUNT_PAID = BigDecimal.ZERO;
 	private boolean amountPaidInFull = false;
 	
-	public PayViaCoin(BigDecimal amountDue)
+	public PayViaCoin(BigDecimal amountDue, Coin payment)
 	{
 		AMOUNT_DUE = amountDue;
+		
+		receiveCoin(payment);
 	}
 	
-	public void receiveCoin(Coin coin)
+	public PayViaCoin(BigDecimal amountDue, Coin[] payment)
 	{
-		if (coin.getValue() == null)
-			throw new NullPointerSimulationException("coin value");
+		AMOUNT_DUE = amountDue;
+		
+		for(Coin coin: payment)
+			receiveCoin(coin);
+	}
+	
+	private void receiveCoin(Coin coin)
+	{
+		if (coin == null)
+			throw new NullPointerSimulationException("coin");
 		
 		if (AMOUNT_DUE.compareTo(BigDecimal.ZERO) > 0)
 		{
 			AMOUNT_DUE = AMOUNT_DUE.subtract(coin.getValue());
 			AMOUNT_PAID = AMOUNT_PAID.add(coin.getValue());
+			SignalCustomer();
 		}
 		else if (AMOUNT_DUE.equals(BigDecimal.ZERO))
 		{
@@ -48,6 +59,11 @@ public class PayViaCoin {
 	public boolean isAmountPaid()
 	{
 		return amountPaidInFull;
+	}
+	
+	private void SignalCustomer()
+	{
+		//TODO signal customer on gui of updated amount due
 	}
 	
 }

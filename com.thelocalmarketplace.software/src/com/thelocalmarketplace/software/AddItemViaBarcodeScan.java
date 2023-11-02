@@ -1,14 +1,11 @@
 package com.thelocalmarketplace.software;
 
 import java.util.HashMap;
-import java.util.Map;
-
 import com.jjjwelectronics.Item;
 import com.jjjwelectronics.Mass;
 import com.jjjwelectronics.scale.ElectronicScale;
 import com.jjjwelectronics.scanner.*;
 import com.thelocalmarketplace.hardware.BarcodedProduct;
-import com.thelocalmarketplace.hardware.external.*;
 
 import ca.ucalgary.seng300.simulation.NullPointerSimulationException;
 
@@ -20,16 +17,22 @@ public class AddItemViaBarcodeScan {
 	private Mass mass;
 	private double expectedWeightInGrams;
 	private long price;
-	private boolean isActiveSession;
+	private boolean isSessionActive;
+	private boolean isSessionBlocked;
 	
 	public AddItemViaBarcodeScan(BarcodedItem barcode) {
 		this.barcode = barcode.getBarcode();
 		
 		// CHECK FOR SESSION
-		if(isActiveSession) {
-			getItemInformation();
-			
+		if(!isSessionBlocked) {
+			isSessionBlocked = true;
+			if(isSessionActive) {
+				getItemInformation();
+			}
+		} else {
+			// Throw session blocked exception
 		}
+		
 	}
 	
 	private void getItemInformation() {
@@ -53,6 +56,7 @@ public class AddItemViaBarcodeScan {
  	public void updateExpectedWeight(Item item) {
 		mass = new Mass(expectedWeightInGrams);
 		scale.addAnItem(item);
+		isSessionBlocked = false;
 	}
 
 }

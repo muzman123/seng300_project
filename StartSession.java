@@ -52,10 +52,12 @@ public class StartSession {
         displayInitialScreen();
         handleTouch();
     }
+}
 
 /**
  * The main class to run the simulation.
  */
+public class Main {
     public static void main(String[] args) {
         // Create the StartSession handler.
         StartSession startSession = new StartSession();

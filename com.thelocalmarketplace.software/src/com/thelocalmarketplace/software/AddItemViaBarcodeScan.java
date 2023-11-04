@@ -1,62 +1,83 @@
 package com.thelocalmarketplace.software;
 
-import java.util.HashMap;
-import com.jjjwelectronics.Item;
 import com.jjjwelectronics.Mass;
 import com.jjjwelectronics.scale.ElectronicScale;
-import com.jjjwelectronics.scanner.*;
+import com.jjjwelectronics.scanner.BarcodeScanner;
+import com.jjjwelectronics.scanner.BarcodedItem;
 import com.thelocalmarketplace.hardware.BarcodedProduct;
+import com.thelocalmarketplace.hardware.external.ProductDatabases;
 
+import ca.ucalgary.seng300.simulation.InvalidArgumentSimulationException;
 import ca.ucalgary.seng300.simulation.NullPointerSimulationException;
+import powerutility.NoPowerException;
 
 public class AddItemViaBarcodeScan {
-	HashMap<Barcode, BarcodedProduct> BARCODED_PRODUCT_DATABASE;
-	ElectronicScale scale;
-	BarcodedProduct product;
-	private Barcode barcode;
-	private Mass mass;
-	private double expectedWeightInGrams;
-	private long price;
 	private boolean isSessionActive;
 	private boolean isSessionBlocked;
+	private double productWeight;
+	private long productPrice;
+	private Mass itemMass;
+	private BarcodedItem barcodedItem;
 	
-	public AddItemViaBarcodeScan(BarcodedItem barcode) {
-		this.barcode = barcode.getBarcode();
+	public void addItemViaScanning(BarcodedProduct product, BarcodeScanner scanner, ElectronicScale scale) {
+		if(!scanner.isPoweredUp() || !scale.isPoweredUp())
+			throw new NoPowerException();
+	
+		if(product == null)
+			throw new NullPointerSimulationException("product was null");
 		
-		// CHECK FOR SESSION
-		if(!isSessionBlocked) {
+		// Check if session is blocked
+		if (!isSessionBlocked) {
 			isSessionBlocked = true;
 			if(isSessionActive) {
-				getItemInformation();
+				// Scan only if the product is present in the database
+				if (ProductDatabases.BARCODED_PRODUCT_DATABASE.containsKey(product.getBarcode())) {
+					// Determine the weight and cost of the item
+					infoAboutAddedProduct(product);
+					
+					// Convert BarcodedProduct from store hardware to BarcodedItem used by jjjwelectronics
+					barcodedItem = convertToBarcodedItem(product);
+					
+					// Scan the item through the scanner (will notify listeners)
+					scanner.scan(barcodedItem);
+					
+					// Update the weight on the scale (will notify listeners)
+					scale.addAnItem(barcodedItem);
+					
+				} else {
+					// Search if there is a dedicated exception for this
+					throw new InvalidArgumentSimulationException("Barcode is not in the database");
+				}
 			}
-		} else {
-			// Throw session blocked exception
-		}
-		
-	}
-	
-	private void getItemInformation() {
-		product = BARCODED_PRODUCT_DATABASE.get(barcode);
-		if (product != null) {
-			price = product.getPrice();
-			expectedWeightInGrams = product.getExpectedWeight();
-		} else {
-			throw new NullPointerSimulationException("product");
+			isSessionBlocked = false;
 		}
 	}
 	
-	public long getItemPrice() {
-		return price;
+	public void setSessionActiveStatus(boolean active) {
+		isSessionActive = active;
 	}
 	
-	public double getExpectedWeight() {
-		return expectedWeightInGrams;
+	public void setSessionBlockStatus(boolean block) {
+		isSessionBlocked = block;
 	}
 	
- 	public void updateExpectedWeight(Item item) {
-		mass = new Mass(expectedWeightInGrams);
-		scale.addAnItem(item);
-		isSessionBlocked = false;
+	private void infoAboutAddedProduct(BarcodedProduct product) {
+		productPrice = product.getPrice();
+		productWeight = product.getExpectedWeight();
+	}
+	
+	public long getAddedProductPrice() {
+		return productPrice;
+	}
+	
+	public double getAddedProductWeight() {
+		return productWeight;
+	}
+	
+	private BarcodedItem convertToBarcodedItem(BarcodedProduct product) {
+		itemMass = new Mass(product.getExpectedWeight());
+		barcodedItem = new BarcodedItem(product.getBarcode(), itemMass);
+		return barcodedItem;
 	}
 
 }

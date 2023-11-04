@@ -1,6 +1,7 @@
 package com.thelocalmarketplace.software.test;
 
 import com.jjjwelectronics.Numeral;
+import com.jjjwelectronics.OverloadedDevice;
 import com.jjjwelectronics.scale.ElectronicScale;
 import com.jjjwelectronics.scale.ElectronicScaleListener;
 import com.jjjwelectronics.scale.IElectronicScale;
@@ -16,6 +17,7 @@ import ca.ucalgary.seng300.simulation.NullPointerSimulationException;
 import powerutility.NoPowerException;
 import powerutility.PowerGrid;
 
+import com.jjjwelectronics.DisabledDevice;
 import com.jjjwelectronics.IDevice;
 import com.jjjwelectronics.IDeviceListener;
 import com.jjjwelectronics.Mass;
@@ -38,8 +40,8 @@ public class TestAddItemViaBarcodeScan {
 	private String description2 = "Chocolate cake";
 	private long price1 = 12;
 	private long price2 = 55;
-	private double expectedWeightInGrams1 = 10.00;
-	private double expectedWeightInGrams2 = 5.42;
+	private double expectedWeightInGrams1 = 100.00;
+	private double expectedWeightInGrams2 = 500.42;
 	private BarcodedProduct product1 = new BarcodedProduct(barcode1, description1, price1, expectedWeightInGrams1);
 	private BarcodedProduct product2 = new BarcodedProduct(barcode2, description2, price2, expectedWeightInGrams2);
 	
@@ -58,19 +60,11 @@ public class TestAddItemViaBarcodeScan {
 	
 	@Before
 	public void setup() {
-		testAddItemClass = new AddItemViaBarcodeScan();
-		
 		ProductDatabases.BARCODED_PRODUCT_DATABASE.put(barcode1, product1);
 		ProductDatabases.BARCODED_PRODUCT_DATABASE.put(barcode2, product2);
 		
 		scanner = new BarcodeScanner();
 		scale = new ElectronicScale();
-		
-		PowerGrid.engageUninterruptiblePowerSource();
-		scanner.plugIn(PowerGrid.instance());
-		scale.plugIn(PowerGrid.instance());
-		scanner.turnOn();
-		scale.turnOn();
 		
 		// Create scanner listener stubs
 		scannerStub1 = new BarcodeScannerListenerStub();
@@ -88,25 +82,37 @@ public class TestAddItemViaBarcodeScan {
 		scale.register(scaleStub2);
 		scale.register(scaleStub3);
 		
+		// Create the testing instance of the class
+		testAddItemClass = new AddItemViaBarcodeScan(scanner, scale);
+		
 		testAddItemClass.setSessionActiveStatus(true);
 		testAddItemClass.setSessionBlockStatus(false);
+		
+		// Power up the scanner and scale
+		PowerGrid.engageUninterruptiblePowerSource();
+		scanner.plugIn(PowerGrid.instance());
+		scale.plugIn(PowerGrid.instance());
+		scanner.turnOn();
+		scale.turnOn();
+		scanner.enable();
+		scale.enable();
 	}
 	
 	// Tests
 	@Test
-	public void testScanningOneItem() {
-		testAddItemClass.addItemViaScanning(product1, scanner, scale);
+	public void testScanningOneItem() throws OverloadedDevice, DisabledDevice {
+		testAddItemClass.addItemViaScanning(product1);
 		assertEquals(scannerStub1.numItemScanned, 1);
 		assertEquals(scannerStub3.numItemScanned, 1);
 		Mass product1Mass = new Mass(product1.getExpectedWeight());
 		assertEquals(scaleStub1.massOnScale, product1Mass);
 		assertEquals(scaleStub2.massOnScale, product1Mass);
 	}
-
+	
 	@Test
-	public void testScanningMultipleItem() {
-		testAddItemClass.addItemViaScanning(product1, scanner, scale);
-		testAddItemClass.addItemViaScanning(product2, scanner, scale);
+	public void testScanningMultipleItem() throws OverloadedDevice, DisabledDevice {
+		testAddItemClass.addItemViaScanning(product1);
+		testAddItemClass.addItemViaScanning(product2);
 		assertEquals(scannerStub2.numItemScanned, 2);
 		assertEquals(scannerStub3.numItemScanned, 2);
 		Mass product1Mass = new Mass(product1.getExpectedWeight());
@@ -117,10 +123,10 @@ public class TestAddItemViaBarcodeScan {
 	}
 	
 	@Test
-	public void testScanningSameItemMultipleTimes() {
-		testAddItemClass.addItemViaScanning(product1, scanner, scale);
-		testAddItemClass.addItemViaScanning(product1, scanner, scale);
-		testAddItemClass.addItemViaScanning(product1, scanner, scale);
+	public void testScanningSameItemMultipleTimes() throws OverloadedDevice, DisabledDevice {
+		testAddItemClass.addItemViaScanning(product1);
+		testAddItemClass.addItemViaScanning(product1);
+		testAddItemClass.addItemViaScanning(product1);
 		assertEquals(scannerStub2.numItemScanned, 3);
 		assertEquals(scannerStub3.numItemScanned, 3);
 		Mass product1Mass = new Mass(product1.getExpectedWeight());
@@ -130,27 +136,39 @@ public class TestAddItemViaBarcodeScan {
 	}
 	
 	@Test (expected = NoPowerException.class)
-	public void testScannerNotPowered() {
+	public void testScannerNotPowered() throws OverloadedDevice, DisabledDevice {
 		scanner.turnOff();
-		testAddItemClass.addItemViaScanning(product1, scanner, scale);
+		testAddItemClass.addItemViaScanning(product1);
 	}
 	
 	@Test (expected = NoPowerException.class)
-	public void testScaleNotPowered() {
+	public void testScaleNotPowered() throws OverloadedDevice, DisabledDevice {
 		scale.turnOff();
-		testAddItemClass.addItemViaScanning(product1, scanner, scale);
+		testAddItemClass.addItemViaScanning(product1);
+	}
+	
+	@Test (expected = DisabledDevice.class)
+	public void testScannerDisabled() throws OverloadedDevice, DisabledDevice {
+		scanner.disable();
+		testAddItemClass.addItemViaScanning(product1);
+	}
+	
+	@Test (expected = DisabledDevice.class)
+	public void testScaleDisabled() throws OverloadedDevice, DisabledDevice {
+		scale.disable();
+		testAddItemClass.addItemViaScanning(product1);
 	}
 	
 	@Test (expected = NullPointerSimulationException.class)
-	public void testNullProduct() {
-		testAddItemClass.addItemViaScanning(null, scanner, scale);
+	public void testNullProduct() throws OverloadedDevice, DisabledDevice {
+		testAddItemClass.addItemViaScanning(null);
 	}
 	
 	@Test
-	public void testSessionBlocked() {
+	public void testSessionBlocked() throws OverloadedDevice, DisabledDevice {
 		testAddItemClass.setSessionBlockStatus(true);
-		testAddItemClass.addItemViaScanning(product1, scanner, scale);
-		testAddItemClass.addItemViaScanning(product2, scanner, scale);
+		testAddItemClass.addItemViaScanning(product1);
+		testAddItemClass.addItemViaScanning(product2);
 		assertEquals(scannerStub2.numItemScanned, 0);
 		assertEquals(scannerStub3.numItemScanned, 0);
 		assertEquals(scaleStub2.massOnScale, Mass.ZERO);
@@ -158,10 +176,10 @@ public class TestAddItemViaBarcodeScan {
 	}
 	
 	@Test
-	public void testSessionNotActive() {
+	public void testSessionNotActive() throws OverloadedDevice, DisabledDevice {
 		testAddItemClass.setSessionActiveStatus(false);
-		testAddItemClass.addItemViaScanning(product1, scanner, scale);
-		testAddItemClass.addItemViaScanning(product2, scanner, scale);
+		testAddItemClass.addItemViaScanning(product1);
+		testAddItemClass.addItemViaScanning(product2);
 		assertEquals(scannerStub2.numItemScanned, 0);
 		assertEquals(scannerStub3.numItemScanned, 0);
 		assertEquals(scaleStub2.massOnScale, Mass.ZERO);
@@ -169,30 +187,58 @@ public class TestAddItemViaBarcodeScan {
 	}
 	
 	@Test (expected = InvalidArgumentSimulationException.class)
-	public void testScanningProductNotInDatabase() {
+	public void testScanningProductNotInDatabase() throws OverloadedDevice, DisabledDevice {
 		Numeral[] numArray3 = new Numeral[]{num2, num1, num2};
 		Barcode barcode3 = new Barcode(numArray3);
 		BarcodedProduct product3 = new BarcodedProduct(barcode3, description1, price1, expectedWeightInGrams1);
-		testAddItemClass.addItemViaScanning(product3, scanner, scale);
+		testAddItemClass.addItemViaScanning(product3);
 	}
 	
 	@Test
-	public void testGettingScannedItemPrice() {
-		testAddItemClass.addItemViaScanning(product1, scanner, scale);
+	public void testGettingScannedItemPrice() throws OverloadedDevice, DisabledDevice {
+		testAddItemClass.addItemViaScanning(product1);
 		assertEquals(testAddItemClass.getAddedProductPrice(), product1.getPrice());
-		testAddItemClass.addItemViaScanning(product2, scanner, scale);
+		testAddItemClass.addItemViaScanning(product2);
 		assertEquals(testAddItemClass.getAddedProductPrice(), product2.getPrice());
 	}
 	
 	@Test
-	public void testGettingScannedItemWeight() {
-		testAddItemClass.addItemViaScanning(product1, scanner, scale);
+	public void testGettingScannedItemWeight() throws OverloadedDevice, DisabledDevice {
+		testAddItemClass.addItemViaScanning(product1);
 		assertEquals(testAddItemClass.getAddedProductWeight(), product1.getExpectedWeight(), 0.0001);
-		testAddItemClass.addItemViaScanning(product2, scanner, scale);
+		testAddItemClass.addItemViaScanning(product2);
 		assertEquals(testAddItemClass.getAddedProductWeight(), product2.getExpectedWeight(), 0.0001);
 	}
 	
+	@Test (expected = OverloadedDevice.class)
+	public void testScanningItemBeyondOverloadWeight() throws OverloadedDevice, DisabledDevice {
+		Numeral[] numArray5 = new Numeral[]{num2, num1, num2, num2, num1};
+		Barcode barcode5 = new Barcode(numArray5);
+		String description5 = "Pool";
+		long price5 = 4000;
+		double expectedWeightInGrams5 = 1000000000000000.00;
+		BarcodedProduct product5 = new BarcodedProduct(barcode5, description5, price5, expectedWeightInGrams5);
+		ProductDatabases.BARCODED_PRODUCT_DATABASE.put(barcode5, product5);
+		testAddItemClass.addItemViaScanning(product5);
+		assertEquals(scaleStub2.massExceeded, true);
+		assertEquals(scaleStub3.massExceeded, true);
+		scale.getCurrentMassOnTheScale();
+	}
 	
+	@Test
+	public void testScanningAndRemovingItemBeyondOverloadWeight() throws OverloadedDevice, DisabledDevice {
+		Numeral[] numArray5 = new Numeral[]{num2, num1, num2, num2, num1};
+		Barcode barcode5 = new Barcode(numArray5);
+		String description5 = "Pool";
+		long price5 = 4000;
+		double expectedWeightInGrams5 = 1000000000000000.00;
+		BarcodedProduct product5 = new BarcodedProduct(barcode5, description5, price5, expectedWeightInGrams5);
+		ProductDatabases.BARCODED_PRODUCT_DATABASE.put(barcode5, product5);
+		testAddItemClass.addItemViaScanning(product5);
+		assertEquals(scaleStub3.massExceeded, true);
+		scale.removeAnItem(testAddItemClass.getBarcodedItem());
+		assertEquals(scaleStub3.massExceeded, false);
+	}
 	
 	// Stub implementation
 	public class BarcodeScannerListenerStub implements BarcodeScannerListener {

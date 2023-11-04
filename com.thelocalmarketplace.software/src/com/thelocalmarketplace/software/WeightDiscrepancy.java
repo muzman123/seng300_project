@@ -1,70 +1,95 @@
 package com.thelocalmarketplace.software;
 
+import com.jjjwelectronics.Item;
+import com.jjjwelectronics.Mass;
+import com.jjjwelectronics.scale.IElectronicScale;
+import com.jjjwelectronics.scale.ElectronicScaleListener;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import com.jjjwelectronics.Item;
-import com.jjjwelectronics.Mass;
+public abstract class WeightDiscrepancy implements ElectronicScaleListener {
+    private IElectronicScale scale;
+    private List<Item> orderItems = new ArrayList<>();
+    private List<Item> itemsOnScale = new ArrayList<>();
 
-public class WeightDiscrepancy {
-    private boolean isDiscrepancyCleared;
-    private List<Item> missingItems;
-    private List<Item> extraItems;
+    private boolean discrepancyCleared = true;
 
-    public WeightDiscrepancy() {
-        isDiscrepancyCleared = true;
-        missingItems = new ArrayList<>();
-        extraItems = new ArrayList<>();
+    public WeightDiscrepancy(IElectronicScale scale) {
+        this.scale = scale;
+        scale.listeners();
     }
 
-    public boolean isDiscrepancyCleared() {
-        return isDiscrepancyCleared;
-    }
 
+    // Attempt to add an item by scanning
     public void addItemByScanning(Item item) {
-        if (isDiscrepancyCleared) {
-            // Add the item to the order as usual
-        } else {
-        	System.out.println("");
-            extraItems.add(item);
-        }
-    }
-
-    public void payWithCoin(Mass totalOrderMass) {
-        if (isDiscrepancyCleared) {
-            // Proceed with payment as usual
-        } else {
-            Mass actualOrderMass = calculateActualOrderMass();
-            if (totalOrderMass.compareTo(actualOrderMass) == 0) {
-                isDiscrepancyCleared = true;
+        if (discrepancyCleared) {
+            // Check if the item is part of the order
+            if (orderItems.contains(item)) {
+                itemsOnScale.add(item);
             }
+        }else {
+        	throw new IllegalStateException("Cannot add item until discrepancy is cleared.");
         }
     }
 
+    // Pay with coins based on the total order mass
+    public void payWithCoin(Mass totalOrderMass) {
+        if (discrepancyCleared && totalOrderMass.equals(calculateTotalMassOnScale())) {
+            // Payment successful, clear discrepancy
+            discrepancyCleared = true;
+        }else {
+        	throw new IllegalStateException("Cannot pay with coin until discrepancy is cleared.");
+        }
+    }
+
+    // Add a missing item to the scale
+    public void addMissingItem(Item missingItem) {
+        if (!discrepancyCleared) {
+            itemsOnScale.add(missingItem);
+        }
+    }
+
+    // Remove an extra item from the scale
+    public void removeExtraItem(Item extraItem) {
+        if (!discrepancyCleared) {
+            itemsOnScale.remove(extraItem);
+        }
+    }
+
+    // Clear the discrepancy
     public void clearDiscrepancy() {
-        isDiscrepancyCleared = true;
-        missingItems.clear();
-        extraItems.clear();
-    }
-
-    public void addMissingItem(Item item) {
-        if (!isDiscrepancyCleared) {
-            missingItems.add(item);
+        if (!discrepancyCleared) {
+            itemsOnScale.clear();
+            discrepancyCleared = true;
         }
     }
 
-    public void removeExtraItem(Item item) {
-        if (!isDiscrepancyCleared) {
-            extraItems.remove(item);
+    // Calculate the total mass of items on the scale
+    private Mass calculateTotalMassOnScale() {
+        Mass totalMass = Mass.ZERO;
+        for (Item item : itemsOnScale) {
+            totalMass = totalMass.sum(item.getMass());
+        }
+        return totalMass;
+    }
+
+    @Override
+    public void theMassOnTheScaleHasChanged(IElectronicScale scale, Mass mass) {
+    	System.out.println("The mass on the scale has changed! ");
+        // Check if the mass on the scale matches the total order mass
+        if (!discrepancyCleared && mass.equals(calculateTotalMassOnScale())) {
+            discrepancyCleared = true;
         }
     }
 
-    private Mass calculateActualOrderMass() {
-        // Calculate the actual order mass by summing the masses of added items
-        Mass actualMass = Mass.ZERO;
-        for (Item item : missingItems) {
-            actualMass = actualMass.sum(item.getMass());
-        }
-        return actualMass;
+    @Override
+    public void theMassOnTheScaleHasExceededItsLimit(IElectronicScale scale) {
+    	System.out.println("The mass on the scale has exceeded its limits! ");
+    }
+
+    @Override
+    public void theMassOnTheScaleNoLongerExceedsItsLimit(IElectronicScale scale) {
+    	System.out.println("The mass on the scale returned below the limit! ");
     }
 }

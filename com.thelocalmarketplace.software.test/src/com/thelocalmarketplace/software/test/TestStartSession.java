@@ -29,7 +29,7 @@ public class TestStartSession {
 	}
 	//Testing case where session is already active, and handleTouch is called again.
 	@Test
-	public void activeSessionHandleTouch() {
+	public void testActiveSessionHandleTouch() {
 		testStartSession.handleTouch();
 		testStartSession.handleTouch();
 		assertTrue(outContent.toString().contains("Session already started."));
@@ -38,8 +38,8 @@ public class TestStartSession {
  	different statement altogether.
 	*/
 	@Test
-	public void InactiveSessionHandleTouch() {
-		//isSessionActive already initialized as false.
+	public void testInactiveSessionHandleTouch() {
+		//is SessionActive already initialized as false.
 		testStartSession.handleTouch();
 		//Tests if isSessionActive has been changed or not
 		assertTrue(testStartSession.isSessionActive());

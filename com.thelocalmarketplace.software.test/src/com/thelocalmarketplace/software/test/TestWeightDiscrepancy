@@ -31,6 +31,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestWeightDiscrepancy {
+	//Initializing all initial stubs, observers, and intefaces
 	int theMassOnTheScaleHasExceededItsLimitCount = 0;
 	WeightDiscrepancyStub weightDiscrepancyStub;
 	IElectronicScaleStub test = new IElectronicScaleStub();
@@ -40,10 +41,12 @@ public class TestWeightDiscrepancy {
 	
 	@Before
 	public void setup() {
+		//Initalizing the weightDiscrepancyStub with a testerStub
 		weightDiscrepancyStub = new WeightDiscrepancyStub(test);
 	}
 	@Test
 	public void testValidPayWithCoin() {
+		//Asserts correct output if proper conditions are in place with payWithCoin()
 		int expectedSignifier = 1;
 		weightDiscrepancyStub.getOrderItems().add(stubItem);
 		weightDiscrepancyStub.addItemByScanning(stubItem);
@@ -52,6 +55,7 @@ public class TestWeightDiscrepancy {
 	}
 	@Test
 	public void testTotalOrderMassMisalignedPayWithCoin() {
+		//Expects an error because the mass provided is invalid.
 		try {
 			weightDiscrepancyStub.payWithCoin(Mass.ONE_GRAM);
 		}catch(IllegalStateException e) {
@@ -61,6 +65,7 @@ public class TestWeightDiscrepancy {
 	}
 	@Test
 	public void testValidAddItemByScanning() {
+		//Valid conditions for AddingItemByScanning()
 		int expectedLength = 1;
 		weightDiscrepancyStub.getOrderItems().add(stubItem);
 		weightDiscrepancyStub.addItemByScanning(stubItem);
@@ -68,6 +73,7 @@ public class TestWeightDiscrepancy {
 	}
 	@Test
 	public void testDiscrepancyNotClearedAddItemByScanning() {
+		//Tries AddItemByScanning, but with a false value for the discrepancy
 		weightDiscrepancyStub.discrepancyNotCleared();
 		try {
 			weightDiscrepancyStub.addItemByScanning(stubItem);
@@ -79,6 +85,7 @@ public class TestWeightDiscrepancy {
 	}
 	@Test
 	public void testDiscrepancyNotClearedPayWithCoin() {
+		//Uncleared discrepancy with PayWithCoin()
 		weightDiscrepancyStub.discrepancyNotCleared();
 		try {
 			weightDiscrepancyStub.payWithCoin(Mass.ONE_GRAM);
@@ -89,11 +96,13 @@ public class TestWeightDiscrepancy {
 	}
 	@Test
 	public void testCalculateTotalMass() {
+		//Test to expect correct value for CalculateTotalMass()
 		Mass expectedMass = Mass.ZERO;
 		assertEquals(expectedMass, weightDiscrepancyStub.calculateTotalMassOnScale());
 	}
 	@Test
 	public void testClearDiscrepancy() {
+		//Tests valid conditions and output for ClearDiscrepancy()
 		int expectedLength = 0;
 		weightDiscrepancyStub.discrepancyNotCleared();
 		weightDiscrepancyStub.clearDiscrepancy();
@@ -102,6 +111,7 @@ public class TestWeightDiscrepancy {
 	}
 	@Test
 	public void testInvalidClearDiscrepancy() {
+		//Tests invalid conditions for ClearDiscrepancy()
 		int expectedLength = 1;
 		weightDiscrepancyStub.getOrderItems().add(stubItem);
 		weightDiscrepancyStub.addItemByScanning(stubItem);
@@ -111,6 +121,7 @@ public class TestWeightDiscrepancy {
 	}
 	@Test
 	public void testRemoveExtraItem() {
+		//Tests removing one extra item with proper conditions
 		int expectedLength = 0;
 		weightDiscrepancyStub.discrepancyNotCleared();
 		weightDiscrepancyStub.getItemsOnScale().add(stubItem);
@@ -119,6 +130,7 @@ public class TestWeightDiscrepancy {
 	}
 	@Test
 	public void testAddMissingItem() {
+		//Tests adding one missing item in proper conditions
 		int expectedLength = 1;
 		weightDiscrepancyStub.discrepancyNotCleared();
 		weightDiscrepancyStub.addMissingItem(stubItem);
@@ -126,18 +138,21 @@ public class TestWeightDiscrepancy {
 	}
 	@Test
 	public void testTheMassOnTheScaleHasExceededItsLimitCount() {
+		//Counts the number of observer calls the method makes when the scale exceeds limits.
 		int expectedCount = 1;
 		weightDiscrepancyStub.theMassOnTheScaleHasExceededItsLimit(test);
 		assertEquals(expectedCount, weightDiscrepancyStub.getTheMassOnTheScaleHasExceededItsLimitCount());
 	}
 	@Test
 	public void testTheMassOnTheScaleNoLongerExceedsItsLimitCount() {
+		//Counts the number of observer calls the method makes when the scale no longer exceeds limits
 		int expectedCount = 1;
 		weightDiscrepancyStub.theMassOnTheScaleNoLongerExceedsItsLimit(test);
 		assertEquals(expectedCount, weightDiscrepancyStub.getTheMassOnTheScaleNoLongerExceedsItsLimitCount());
 	}
 	@Test
 	public void testTheMassHasChanged() {
+		//Counts the number of observer calls the method makes when the mass changes, and asserts true from the discrepancy variable
 		int expectedCount = 1;
 		weightDiscrepancyStub.getOrderItems().add(stubItem);
 		weightDiscrepancyStub.addItemByScanning(stubItem);

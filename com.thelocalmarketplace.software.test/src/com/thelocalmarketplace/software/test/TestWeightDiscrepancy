@@ -10,7 +10,7 @@ import com.jjjwelectronics.scanner.BarcodeScanner;
 import com.jjjwelectronics.scanner.BarcodeScannerListener;
 import com.thelocalmarketplace.hardware.BarcodedProduct;
 import com.thelocalmarketplace.hardware.external.ProductDatabases;
-import com.thelocalmarketplace.software.WeightDiscrepancy;
+import com.thelocalmarketplace.software.*;
 
 import ca.ucalgary.seng300.simulation.InvalidArgumentSimulationException;
 import ca.ucalgary.seng300.simulation.NullPointerSimulationException;
@@ -32,17 +32,32 @@ import org.junit.Test;
 
 public class TestWeightDiscrepancy {
 	int theMassOnTheScaleHasExceededItsLimitCount = 0;
-	ElectronicScaleListenerStub scaleStub;
 	WeightDiscrepancyStub weightDiscrepancyStub;
-	IElectronicScale test;
+	IElectronicScaleStub test = new IElectronicScaleStub();
 	ItemStub stubItem = new ItemStub(Mass.ONE_GRAM);
 	WeightDiscrepancy tester;
 	
 	
 	@Before
 	public void setup() {
-		test = new IElectronicScale(); // Giving me an error here because IElectronicScale can't be instantiated.
-		weightDiscrepancyStub.addListeners(test);
+		weightDiscrepancyStub = new WeightDiscrepancyStub(test);
+	}
+	@Test
+	public void testValidPayWithCoin() {
+		int expectedSignifier = 1;
+		weightDiscrepancyStub.getOrderItems().add(stubItem);
+		weightDiscrepancyStub.addItemByScanning(stubItem);
+		weightDiscrepancyStub.payWithCoin(Mass.ONE_GRAM);
+		assertEquals(expectedSignifier, weightDiscrepancyStub.getSignifier());
+	}
+	@Test
+	public void testTotalOrderMassMisalignedPayWithCoin() {
+		try {
+			weightDiscrepancyStub.payWithCoin(Mass.ONE_GRAM);
+		}catch(IllegalStateException e) {
+			return;
+		}
+		fail("Expected IllegalStateException");
 	}
 	@Test
 	public void testValidAddItemByScanning() {
@@ -86,17 +101,28 @@ public class TestWeightDiscrepancy {
 		assertEquals(expectedLength, weightDiscrepancyStub.getOrderItems().size());
 	}
 	@Test
+	public void testInvalidClearDiscrepancy() {
+		int expectedLength = 1;
+		weightDiscrepancyStub.getOrderItems().add(stubItem);
+		weightDiscrepancyStub.addItemByScanning(stubItem);
+		weightDiscrepancyStub.clearDiscrepancy();
+		assertEquals(expectedLength, weightDiscrepancyStub.getItemsOnScale().size());
+		assertTrue(weightDiscrepancyStub.getDiscrepancy());
+	}
+	@Test
 	public void testRemoveExtraItem() {
+		int expectedLength = 0;
 		weightDiscrepancyStub.discrepancyNotCleared();
 		weightDiscrepancyStub.getItemsOnScale().add(stubItem);
 		weightDiscrepancyStub.removeExtraItem(stubItem);
-		assertTrue(weightDiscrepancyStub.getItemsOnScale().size() == 0);
+		assertEquals(expectedLength, weightDiscrepancyStub.getItemsOnScale().size());
 	}
 	@Test
 	public void testAddMissingItem() {
+		int expectedLength = 1;
 		weightDiscrepancyStub.discrepancyNotCleared();
 		weightDiscrepancyStub.addMissingItem(stubItem);
-		assertTrue(weightDiscrepancyStub.getItemsOnScale().size() == 1);
+		assertEquals(expectedLength, weightDiscrepancyStub.getItemsOnScale().size());
 	}
 	@Test
 	public void testTheMassOnTheScaleHasExceededItsLimitCount() {
@@ -105,9 +131,19 @@ public class TestWeightDiscrepancy {
 		assertEquals(expectedCount, weightDiscrepancyStub.getTheMassOnTheScaleHasExceededItsLimitCount());
 	}
 	@Test
-	public void testtheMassOnTheScaleNoLongerExceedsItsLimitCount() {
+	public void testTheMassOnTheScaleNoLongerExceedsItsLimitCount() {
 		int expectedCount = 1;
 		weightDiscrepancyStub.theMassOnTheScaleNoLongerExceedsItsLimit(test);
 		assertEquals(expectedCount, weightDiscrepancyStub.getTheMassOnTheScaleNoLongerExceedsItsLimitCount());
+	}
+	@Test
+	public void testTheMassHasChanged() {
+		int expectedCount = 1;
+		weightDiscrepancyStub.getOrderItems().add(stubItem);
+		weightDiscrepancyStub.addItemByScanning(stubItem);
+		weightDiscrepancyStub.discrepancyNotCleared();
+		weightDiscrepancyStub.theMassOnTheScaleHasChanged(test, Mass.ONE_GRAM);
+		assertEquals(expectedCount, weightDiscrepancyStub.getTheMassOnTheScaleHasChangedCount());
+		assertTrue(weightDiscrepancyStub.getDiscrepancy());
 	}
 }

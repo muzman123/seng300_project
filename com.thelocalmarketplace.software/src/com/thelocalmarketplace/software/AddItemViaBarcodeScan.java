@@ -1,3 +1,11 @@
+//Names & UCID
+//Arvin Bolbolanardestani 30165484
+//Zeyad Elrayes 30161958
+//Dvij Raval 30024340
+//Muzammil Saleem 30180889
+//Ryan Wong 30171793
+//Danish Sharma 30172600
+
 package com.thelocalmarketplace.software;
 
 import com.jjjwelectronics.DisabledDevice;
@@ -17,12 +25,11 @@ import com.thelocalmarketplace.hardware.BarcodedProduct;
 import com.thelocalmarketplace.hardware.external.ProductDatabases;
 
 import ca.ucalgary.seng300.simulation.InvalidArgumentSimulationException;
+import ca.ucalgary.seng300.simulation.InvalidStateSimulationException;
 import ca.ucalgary.seng300.simulation.NullPointerSimulationException;
 import powerutility.NoPowerException;
 
 public class AddItemViaBarcodeScan implements ElectronicScaleListener, BarcodeScannerListener {
-	private boolean isSessionActive;
-	private boolean isSessionBlocked;
 	private double productWeight;
 	private long productPrice;
 	private Mass itemMass;
@@ -31,63 +38,63 @@ public class AddItemViaBarcodeScan implements ElectronicScaleListener, BarcodeSc
 	private BarcodeScanner scanner;
 	private ElectronicScale scale;
 	
+	public WeightDiscrepancy weightErrorDetector;
+	
 	public AddItemViaBarcodeScan(BarcodeScanner inputScanner, ElectronicScale inputScale) {
 		scanner = inputScanner;
 		scale = inputScale;
 		scanner.register(this);
 		scale.register(this);
+		weightErrorDetector = new WeightDiscrepancy(scale);
 	}
 	
 	public void addItemViaScanning(BarcodedProduct product) throws OverloadedDevice, DisabledDevice {
+		// Neither of the scanner or scale can be without power
 		if(!scannerPower || !scalePower) {
 			throw new NoPowerException();
 		}
+		// Neither of the scanner or scale can be disabled
 		if (!scannerEnabled || !scaleEnabled) {
 			throw new DisabledDevice();
 		}
-		if(product == null)
+		// Product can not be null
+		if(product == null) {
 			throw new NullPointerSimulationException("product was null");
-		// Check if session is blocked
-		if (!isSessionBlocked) {
-			isSessionBlocked = true;
-			if(isSessionActive) {
-				// Scan only if the product is present in the database
-				if (ProductDatabases.BARCODED_PRODUCT_DATABASE.containsKey(product.getBarcode())) {
-					// Determine the weight and cost of the item
-					this.infoAboutAddedProduct(product);
-					// Convert BarcodedProduct from store hardware to BarcodedItem used by jjjwelectronics
-					barcodedItem = convertToBarcodedItem(product);
-					// Scan the item through the scanner (will notify listeners)
-					scanner.scan(barcodedItem);
-					// Get current weight on the scale
-					Mass currentWeight = scale.getCurrentMassOnTheScale();
-					Mass expectedWeight = currentWeight.sum(barcodedItem.getMass());
-						
-					// Update the weight on the scale (will notify listeners)
-					scale.addAnItem(barcodedItem);
-					
-					if (scaleOverloaded) {
-						// TODO inform other aspects of the program about the scale being overloaded in future implementations
-					}
-					if (updatedMass.equals(expectedWeight)) {
-						// TODO Notify the session that an item has been successfully scanned (behavior depends on future implementations)
-					} // else {} TODO Once there is a GUI/Mechanism for the item not be added to the scale
-				} else {
-					// Search if there is a dedicated exception for this
-					throw new InvalidArgumentSimulationException("Barcode is not in the database");
-				}
+		}
+		// Check if session is blocked due to a discrepancy
+		if (weightErrorDetector.discrepancyStatus()) {
+			// TODO Implement behavior for scanning when a discrepancy is detected (likely a thrown exception which produces a effect elsewhere)
+			throw new InvalidStateSimulationException("Can not scan item as session is blocked");
+		}
+
+		// Scan only if the product is present in the database
+		if (ProductDatabases.BARCODED_PRODUCT_DATABASE.containsKey(product.getBarcode())) {
+			// Determine the weight and cost of the item
+			this.infoAboutAddedProduct(product);
+			// Convert BarcodedProduct from store hardware to BarcodedItem used by jjjwelectronics
+			barcodedItem = convertToBarcodedItem(product);
+			weightErrorDetector.addItemToOrder(barcodedItem);
+			// Scan the item through the scanner (will notify listeners)
+			scanner.scan(barcodedItem);
+			// Get current weight on the scale
+			Mass currentWeight = scale.getCurrentMassOnTheScale();
+			Mass expectedWeight = currentWeight.sum(barcodedItem.getMass());
+				
+			// Update the weight on the scale (will notify listeners)
+			scale.addAnItem(barcodedItem);
+			
+			if (scaleOverloaded) {
+				// TODO inform other aspects of the program about the scale being overloaded in future implementations
 			}
-			isSessionBlocked = false;
+			if (updatedMass.equals(expectedWeight)) {
+				// TODO Notify the session that an item has been successfully scanned (behavior depends on future implementations)
+			} // else {} TODO Once there is a GUI/Mechanism for the item not be added to the scale
+		} else {
+			// Search if there is a dedicated exception for this
+			throw new InvalidArgumentSimulationException("Barcode is not in the database");
 		}
 	}
-	
-	public void setSessionActiveStatus(boolean active) {
-		isSessionActive = active;
-	}
-	
-	public void setSessionBlockStatus(boolean block) {
-		isSessionBlocked = block;
-	}
+
 	
 	private void infoAboutAddedProduct(BarcodedProduct product) {
 		productPrice = product.getPrice();

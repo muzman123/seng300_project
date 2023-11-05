@@ -1,8 +1,16 @@
+//Names & UCID
+//Arvin Bolbolanardestani 30165484
+//Zeyad Elrayes 30161958
+//Dvij Raval 30024340
+//Muzammil Saleem 30180889
+//Ryan Wong 30171793
+//Danish Sharma 30172600
+
 package com.thelocalmarketplace.software;
 
 import java.math.BigDecimal;
 
-import com.jjjwelectronics.DisabledDevice;
+import com.jjjwelectronics.scale.ElectronicScale;
 import com.tdc.CashOverloadException;
 import com.tdc.DisabledException;
 import com.tdc.IComponent;
@@ -14,6 +22,7 @@ import com.tdc.coin.CoinValidator;
 import com.tdc.coin.CoinValidatorObserver;
 
 import ca.ucalgary.seng300.simulation.InvalidArgumentSimulationException;
+import ca.ucalgary.seng300.simulation.InvalidStateSimulationException;
 import ca.ucalgary.seng300.simulation.NullPointerSimulationException;
 import powerutility.NoPowerException;
 
@@ -27,10 +36,11 @@ public class PayViaCoin implements CoinValidatorObserver, CoinStorageUnitObserve
 	private CoinValidator coin_validator;
 	private CoinStorageUnit storage_unit;
 	
+	public WeightDiscrepancy weightErrorDetector;
+	
 	// Constructor to create an instance of pay via coin (reflects the idea that the customer selected
 	// this as their mode of payment and then will begin to input coin/coins)
-	public PayViaCoin(BigDecimal amountDue, CoinValidator validator, CoinStorageUnit storage)
-	{
+	public PayViaCoin(BigDecimal amountDue, CoinValidator validator, CoinStorageUnit storage, ElectronicScale inputScale) {
 		if(amountDue.equals(BigDecimal.ZERO)) {
 			throw new InvalidArgumentSimulationException("Amount due argument cannot be zero");
 		}
@@ -39,6 +49,7 @@ public class PayViaCoin implements CoinValidatorObserver, CoinStorageUnitObserve
 		storage_unit = storage;
 		coin_validator.attach(this);
 		storage_unit.attach(this);
+		weightErrorDetector = new WeightDiscrepancy(inputScale);
 	}
 	
 	// A single coin was added to the payment by the customer
@@ -66,6 +77,12 @@ public class PayViaCoin implements CoinValidatorObserver, CoinStorageUnitObserve
 	private void receiveCoin(Coin coin) throws DisabledException, CashOverloadException {
 		if(!coin_validator.isActivated() || !storage_unit.isActivated()) {
 			throw new NoPowerException();
+		}
+		// Check if session is blocked due to a discrepancy
+		if (weightErrorDetector.discrepancyStatus()) {
+			CHANGE_OWED = CHANGE_OWED.add(coin.getValue());
+			// TODO Implement behavior for scanning when a discrepancy is detected (likely a thrown exception which produces a effect elsewhere)
+			throw new InvalidStateSimulationException("Can not pay by coin as session is blocked");
 		}
 		// If amount is not paid in full then take the payment and subtract it from the AMOUNT_DUE
 		if (!amountPaidInFull) {

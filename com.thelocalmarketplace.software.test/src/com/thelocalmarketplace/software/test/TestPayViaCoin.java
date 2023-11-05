@@ -1,3 +1,11 @@
+//Names & UCID
+//Arvin Bolbolanardestani 30165484
+//Zeyad Elrayes 30161958
+//Dvij Raval 30024340
+//Muzammil Saleem 30180889
+//Ryan Wong 30171793
+//Danish Sharma 30172600
+
 package com.thelocalmarketplace.software.test;
 
 import java.math.BigDecimal;
@@ -9,7 +17,11 @@ import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 
-
+import com.jjjwelectronics.Mass;
+import com.jjjwelectronics.Numeral;
+import com.jjjwelectronics.scale.ElectronicScale;
+import com.jjjwelectronics.scanner.Barcode;
+import com.jjjwelectronics.scanner.BarcodedItem;
 import com.tdc.CashOverloadException;
 import com.tdc.DisabledException;
 import com.tdc.IComponent;
@@ -23,6 +35,7 @@ import com.tdc.coin.CoinValidatorObserver;
 import com.thelocalmarketplace.software.PayViaCoin;
 
 import ca.ucalgary.seng300.simulation.InvalidArgumentSimulationException;
+import ca.ucalgary.seng300.simulation.InvalidStateSimulationException;
 import ca.ucalgary.seng300.simulation.NullPointerSimulationException;
 
 import static java.util.Map.entry;
@@ -61,6 +74,9 @@ public class TestPayViaCoin {
 	
 	private BigDecimal AMOUNT_DUE;
 	private PayViaCoin testPayViaCoin;
+	
+	// The scale for detecting weight discrepancy
+	private ElectronicScale scale;
 
 	@Before
 	public void setup() {
@@ -98,8 +114,9 @@ public class TestPayViaCoin {
 		storageUnit.attach(storageStub2);
 		
 		// Setup an instance of the PayViaCoin class
+		scale = new ElectronicScale();
 		AMOUNT_DUE = new BigDecimal("0.75");
-		testPayViaCoin = new PayViaCoin(AMOUNT_DUE, coinValidator, storageUnit);
+		testPayViaCoin = new PayViaCoin(AMOUNT_DUE, coinValidator, storageUnit, scale);
 		
 		//Connect the component to the power grid which can not surge
 		PowerGrid.engageUninterruptiblePowerSource();
@@ -109,13 +126,16 @@ public class TestPayViaCoin {
 		storageUnit.connect(PowerGrid.instance());
 		storageUnit.activate();
 		storageUnit.enable();
+		scale.plugIn(PowerGrid.instance());
+		scale.turnOn();
+		scale.enable();
 	}
 	
 	// Tests
 	@Test (expected = InvalidArgumentSimulationException.class)
 	public void testAmountZero() throws DisabledException, CashOverloadException {
 		BigDecimal zeroAmount = BigDecimal.ZERO;
-		testPayViaCoin = new PayViaCoin(zeroAmount, coinValidator, storageUnit);
+		testPayViaCoin = new PayViaCoin(zeroAmount, coinValidator, storageUnit, scale);
 	}
 	
 	@Test (expected = NoPowerException.class)
@@ -219,6 +239,25 @@ public class TestPayViaCoin {
 		testPayViaCoin.coinAdded(coin1);
 		testPayViaCoin.coinAdded(coin1);
 		testPayViaCoin.coinAdded(coin1);
+		testPayViaCoin.coinAdded(coin1);
+	}
+	
+	@Test (expected = InvalidStateSimulationException.class)
+	public void testAddingCoinWithDiscrepancyPresent() throws DisabledException, CashOverloadException{
+		Numeral num1 = Numeral.valueOf((byte)0);
+		Numeral num2 = Numeral.valueOf((byte)1);
+		Numeral[] numArray1 = new Numeral[]{num1, num2};
+		Numeral[] numArray2 = new Numeral[]{num2, num1};
+		Barcode barcode1 = new Barcode(numArray1);
+		Barcode barcode2 = new Barcode(numArray2);
+		Mass itemMass1 = new Mass(1000);
+		Mass itemMass2 = new Mass(100000);
+		BarcodedItem testBarcodedItem1 = new BarcodedItem(barcode1, itemMass1);
+		BarcodedItem testBarcodedItem2 = new BarcodedItem(barcode2, itemMass2);
+		testPayViaCoin.weightErrorDetector.addItemToOrder(testBarcodedItem1);
+		// Will case discrepancy
+		scale.addAnItem(testBarcodedItem2);
+		// Adding coin to a blocked session will throw exception
 		testPayViaCoin.coinAdded(coin1);
 	}
 	

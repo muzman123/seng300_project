@@ -1,5 +1,12 @@
-package com.thelocalmarketplace.software.test;
+//Names & UCID
+//Arvin Bolbolanardestani 30165484
+//Zeyad Elrayes 30161958
+//Dvij Raval 30024340
+//Muzammil Saleem 30180889
+//Ryan Wong 30171793
 //Danish Sharma 30172600
+
+package com.thelocalmarketplace.software.test;
 import com.thelocalmarketplace.software.StartSession;
 
 import static org.junit.Assert.*;
@@ -29,7 +36,7 @@ public class TestStartSession {
 	}
 	//Testing case where session is already active, and handleTouch is called again.
 	@Test
-	public void testActiveSessionHandleTouch() {
+	public void activeSessionHandleTouch() {
 		testStartSession.handleTouch();
 		testStartSession.handleTouch();
 		assertTrue(outContent.toString().contains("Session already started."));
@@ -38,12 +45,19 @@ public class TestStartSession {
  	different statement altogether.
 	*/
 	@Test
-	public void testInactiveSessionHandleTouch() {
-		//is SessionActive already initialized as false.
+	public void InactiveSessionHandleTouch() {
+		//isSessionActive already initialized as false.
 		testStartSession.handleTouch();
 		//Tests if isSessionActive has been changed or not
 		assertTrue(testStartSession.isSessionActive());
 		//Finally, tests output stream.
-		assertEquals("Session started. Ready for further customer interaction.\n", outContent.toString());		
+		assertTrue(outContent.toString().contains("Session started. Ready for further customer interaction."));	
+	}
+	
+	@Test
+	public void testSimulateStartSession() {
+		//isSessionActive already initialized as false.
+		testStartSession.simulateStartSession();
+		assertTrue(outContent.toString().contains("Touch Anywhere to Start."));	
 	}
 }

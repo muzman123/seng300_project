@@ -1,3 +1,11 @@
+//Names & UCID
+//Arvin Bolbolanardestani 30165484
+//Zeyad Elrayes 30161958
+//Dvij Raval 30024340
+//Muzammil Saleem 30180889
+//Ryan Wong 30171793
+//Danish Sharma 30172600
+
 package com.thelocalmarketplace.software.test;
 
 import com.jjjwelectronics.Numeral;
@@ -8,11 +16,13 @@ import com.jjjwelectronics.scale.IElectronicScale;
 import com.jjjwelectronics.scanner.Barcode;
 import com.jjjwelectronics.scanner.BarcodeScanner;
 import com.jjjwelectronics.scanner.BarcodeScannerListener;
+import com.jjjwelectronics.scanner.BarcodedItem;
 import com.thelocalmarketplace.hardware.BarcodedProduct;
 import com.thelocalmarketplace.hardware.external.ProductDatabases;
 import com.thelocalmarketplace.software.AddItemViaBarcodeScan;
 
 import ca.ucalgary.seng300.simulation.InvalidArgumentSimulationException;
+import ca.ucalgary.seng300.simulation.InvalidStateSimulationException;
 import ca.ucalgary.seng300.simulation.NullPointerSimulationException;
 import powerutility.NoPowerException;
 import powerutility.PowerGrid;
@@ -84,10 +94,7 @@ public class TestAddItemViaBarcodeScan {
 		
 		// Create the testing instance of the class
 		testAddItemClass = new AddItemViaBarcodeScan(scanner, scale);
-		
-		testAddItemClass.setSessionActiveStatus(true);
-		testAddItemClass.setSessionBlockStatus(false);
-		
+
 		// Power up the scanner and scale
 		PowerGrid.engageUninterruptiblePowerSource();
 		scanner.plugIn(PowerGrid.instance());
@@ -164,27 +171,6 @@ public class TestAddItemViaBarcodeScan {
 		testAddItemClass.addItemViaScanning(null);
 	}
 	
-	@Test
-	public void testSessionBlocked() throws OverloadedDevice, DisabledDevice {
-		testAddItemClass.setSessionBlockStatus(true);
-		testAddItemClass.addItemViaScanning(product1);
-		testAddItemClass.addItemViaScanning(product2);
-		assertEquals(scannerStub2.numItemScanned, 0);
-		assertEquals(scannerStub3.numItemScanned, 0);
-		assertEquals(scaleStub2.massOnScale, Mass.ZERO);
-		assertEquals(scaleStub3.massOnScale, Mass.ZERO);
-	}
-	
-	@Test
-	public void testSessionNotActive() throws OverloadedDevice, DisabledDevice {
-		testAddItemClass.setSessionActiveStatus(false);
-		testAddItemClass.addItemViaScanning(product1);
-		testAddItemClass.addItemViaScanning(product2);
-		assertEquals(scannerStub2.numItemScanned, 0);
-		assertEquals(scannerStub3.numItemScanned, 0);
-		assertEquals(scaleStub2.massOnScale, Mass.ZERO);
-		assertEquals(scaleStub3.massOnScale, Mass.ZERO);
-	}
 	
 	@Test (expected = InvalidArgumentSimulationException.class)
 	public void testScanningProductNotInDatabase() throws OverloadedDevice, DisabledDevice {
@@ -239,6 +225,20 @@ public class TestAddItemViaBarcodeScan {
 		scale.removeAnItem(testAddItemClass.getBarcodedItem());
 		assertEquals(scaleStub3.massExceeded, false);
 	}
+	
+	@Test (expected = InvalidStateSimulationException.class)
+	public void testBlockingAfterDetectingWeightDiscrepancy() throws OverloadedDevice, DisabledDevice {
+		Mass itemMass = new Mass(product2.getExpectedWeight());
+		BarcodedItem testBarcodedItem = new BarcodedItem(product2.getBarcode(), itemMass);
+		testAddItemClass.weightErrorDetector.addItemToOrder(testBarcodedItem);
+		// Causes the discrepancy
+		testAddItemClass.addItemViaScanning(product1);
+		// Trying to add any more should throw the exception
+		testAddItemClass.addItemViaScanning(product1);
+	}
+	
+	
+	
 	
 	// Stub implementation
 	public class BarcodeScannerListenerStub implements BarcodeScannerListener {

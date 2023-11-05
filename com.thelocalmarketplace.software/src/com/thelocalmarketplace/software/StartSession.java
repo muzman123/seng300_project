@@ -1,3 +1,11 @@
+//Names & UCID
+//Arvin Bolbolanardestani 30165484
+//Zeyad Elrayes 30161958
+//Dvij Raval 30024340
+//Muzammil Saleem 30180889
+//Ryan Wong 30171793
+//Danish Sharma 30172600
+
 package com.thelocalmarketplace.software;
 
 /**
@@ -54,8 +62,9 @@ public class StartSession {
     }
 
 /**
- * The main class to run the simulation.
+ * The main method to start the simulation (For use in future implementations)
  */
+    /*
     public static void main(String[] args) {
         // Create the StartSession handler.
         StartSession startSession = new StartSession();
@@ -63,4 +72,5 @@ public class StartSession {
         // Simulate the "Start Session" use case.
         startSession.simulateStartSession();
     }
+    */
 }
